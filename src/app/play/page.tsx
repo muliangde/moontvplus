@@ -653,7 +653,7 @@ function PlayPageClient() {
             // 如果是m3u8文件，处理内容以移除广告分段
             if (response.data && typeof response.data === 'string') {
               // 过滤掉广告段 - 实现更精确的广告过滤逻辑
-              response.data = filterAdsFromM3U8(response.data);
+              response.data = filterAdsFromM3U8(currentSourceRef.current,response.data);
             }
             return onSuccess(response, stats, context, null);
           };
