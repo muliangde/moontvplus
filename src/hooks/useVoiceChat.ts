@@ -41,6 +41,7 @@ export function useVoiceChat({
   const remoteStreamsRef = useRef<Map<string, MediaStream>>(new Map());
   const audioContextRef = useRef<AudioContext | null>(null);
   const remoteAudioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const nextPlayTimeRef = useRef<Map<string, number>>(new Map()); // 跟踪每个用户的下一个播放时间
 
   // 服务器中转相关
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -156,6 +157,9 @@ export function useVoiceChat({
       remoteAudioElementsRef.current.delete(peerId);
     }
     remoteStreamsRef.current.delete(peerId);
+
+    // 清除该用户的播放时间记录
+    nextPlayTimeRef.current.delete(peerId);
   }, []);
 
   // 清理WebRTC连接
@@ -310,7 +314,13 @@ export function useVoiceChat({
       };
 
       source.connect(processor);
-      processor.connect(audioContext.destination);
+
+      // ScriptProcessorNode需要连接到某个节点才能触发onaudioprocess
+      // 但连接到destination会产生本地回声，所以创建一个静音的GainNode
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = 0; // 静音，不输出到喇叭
+      processor.connect(gainNode);
+      gainNode.connect(audioContext.destination);
 
       // 保存引用以便清理
       audioContextRef.current = audioContext;
@@ -382,11 +392,26 @@ export function useVoiceChat({
       const audioBuffer = audioContext.createBuffer(1, float32Array.length, sampleRate);
       audioBuffer.getChannelData(0).set(float32Array);
 
-      // 创建AudioBufferSourceNode并播放
+      // 计算音频块的持续时间
+      const duration = float32Array.length / sampleRate;
+
+      // 获取当前时间和下一个播放时间
+      const currentTime = audioContext.currentTime;
+      let nextPlayTime = nextPlayTimeRef.current.get(userId) || currentTime;
+
+      // 如果下一个播放时间已经过去，使用当前时间
+      if (nextPlayTime < currentTime) {
+        nextPlayTime = currentTime;
+      }
+
+      // 创建AudioBufferSourceNode并调度播放
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioContext.destination);
-      source.start();
+      source.start(nextPlayTime);
+
+      // 更新下一个播放时间
+      nextPlayTimeRef.current.set(userId, nextPlayTime + duration);
     } catch (err) {
       console.error('[VoiceChat] Failed to play audio:', err);
       setError('音频播放失败: ' + (err as Error).message);
@@ -405,6 +430,9 @@ export function useVoiceChat({
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+
+    // 清除播放时间记录
+    nextPlayTimeRef.current.clear();
 
     setIsConnected(false);
     setIsConnecting(false);

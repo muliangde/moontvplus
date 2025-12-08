@@ -77,6 +77,7 @@ export interface ServerToClientEvents {
   'voice:offer': (data: { userId: string; offer: RTCSessionDescriptionInit }) => void;
   'voice:answer': (data: { userId: string; answer: RTCSessionDescriptionInit }) => void;
   'voice:ice': (data: { userId: string; candidate: RTCIceCandidateInit }) => void;
+  'voice:mic-enabled': (data: { userId: string }) => void;
   'voice:audio-chunk': (data: { userId: string; audioData: number[]; sampleRate?: number }) => void;
   'state:cleared': () => void;
   'error': (message: string) => void;
