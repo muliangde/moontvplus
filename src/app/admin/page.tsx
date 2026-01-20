@@ -10734,12 +10734,23 @@ const WebLiveConfig = ({
     platform: 'huya',
     roomId: '',
   });
+  const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+  const [isEnabling, setIsEnabling] = useState(false);
 
   useEffect(() => {
     if (config?.WebLiveConfig) {
       setWebLiveSources(config.WebLiveConfig);
     }
   }, [config]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showDisclaimerModal && countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [showDisclaimerModal, countdown]);
 
   const callApi = async (body: Record<string, any>) => {
     try {
@@ -10798,12 +10809,111 @@ const WebLiveConfig = ({
     withLoading(`deleteWebLive_${key}`, () => callApi({ action: 'delete', key })).catch(() => {});
   };
 
+  const handleToggleWebLiveEnabled = async () => {
+    const currentEnabled = config?.WebLiveEnabled ?? false;
+
+    if (!currentEnabled) {
+      setShowDisclaimerModal(true);
+      setCountdown(10);
+    } else {
+      await withLoading('toggleWebLiveEnabled', async () => {
+        await callApi({ action: 'toggleEnabled', enabled: false });
+      }).catch(() => {});
+    }
+  };
+
+  const handleConfirmEnable = async () => {
+    setIsEnabling(true);
+    try {
+      await callApi({ action: 'toggleEnabled', enabled: true });
+      setShowDisclaimerModal(false);
+      setCountdown(10);
+    } catch (err) {
+      // Error already handled by callApi
+    } finally {
+      setIsEnabling(false);
+    }
+  };
+
   if (!config) {
     return <div className='text-center text-gray-500 dark:text-gray-400'>加载中...</div>;
   }
 
   return (
     <div className='space-y-6'>
+      {/* 功能总开关 */}
+      <div className='p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-lg border-2 border-orange-300 dark:border-orange-700'>
+        <div className='flex items-center justify-between'>
+          <div className='flex-1'>
+            <h4 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1'>
+              网络直播功能总开关
+            </h4>
+            <p className='text-xs text-gray-600 dark:text-gray-400'>
+              关闭后，侧边栏和底部导航栏的网络直播入口将被隐藏，用户无法访问网络直播页面
+            </p>
+          </div>
+          <button
+            onClick={handleToggleWebLiveEnabled}
+            disabled={isLoading('toggleWebLiveEnabled')}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
+              config.WebLiveEnabled ? buttonStyles.toggleOn : buttonStyles.toggleOff
+            } ${isLoading('toggleWebLiveEnabled') ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full transition-transform ${
+                buttonStyles.toggleThumb
+              } ${config.WebLiveEnabled ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff}`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* 免责声明弹窗 */}
+      {showDisclaimerModal && createPortal(
+        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'>
+          <div className='bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full border border-red-200 dark:border-red-800'>
+            <div className='p-6'>
+              <div className='flex justify-center mb-4'>
+                <AlertTriangle className='w-12 h-12 text-red-500' />
+              </div>
+
+              <h3 className='text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 text-center'>
+                免责声明
+              </h3>
+
+              <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6'>
+                <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
+                  本功能仅供个人学习和技术研究使用，请勿将其部署在公网环境中，更不得用于任何违法违规行为。
+                  使用本功能所产生的一切法律责任由使用者自行承担，与开发者无关。
+                  启用此功能即表示您已充分理解并同意承担相应风险。
+                </p>
+              </div>
+
+              <div className='flex gap-3 justify-center'>
+                <button
+                  onClick={() => {
+                    setShowDisclaimerModal(false);
+                    setCountdown(10);
+                  }}
+                  className={buttonStyles.secondary}
+                  disabled={isEnabling}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleConfirmEnable}
+                  disabled={countdown > 0 || isEnabling}
+                  className={countdown > 0 || isEnabling ? buttonStyles.disabled : buttonStyles.danger}
+                >
+                  {isEnabling ? '启用中...' : countdown > 0 ? `确认 (${countdown}s)` : '确认启用'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       <div className='flex items-center justify-between'>
         <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>网络直播列表</h4>
         <button

@@ -27,6 +27,12 @@ export async function POST(request: NextRequest) {
     }
 
     switch (action) {
+      case 'toggleEnabled': {
+        const { enabled } = body;
+        config.WebLiveEnabled = enabled;
+        break;
+      }
+
       case 'add': {
         const { name, platform, roomId } = body;
         if (!name || !platform || !roomId) {

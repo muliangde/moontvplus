@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import PageLayout from '@/components/PageLayout';
-import { Radio } from 'lucide-react';
+import { Radio, AlertTriangle } from 'lucide-react';
 import Head from 'next/head';
 
 let Artplayer: any = null;
@@ -25,6 +25,7 @@ export default function WebLivePage() {
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  const [isWebLiveEnabled, setIsWebLiveEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     const meta = document.createElement('meta');
@@ -36,8 +37,18 @@ export default function WebLivePage() {
       import('artplayer').then(mod => { Artplayer = mod.default; });
       import('hls.js').then(mod => { Hls = mod.default; });
       import('flv.js').then(mod => { flvjs = mod.default; });
+
+      // 检查网络直播功能是否启用
+      const runtimeConfig = (window as any).RUNTIME_CONFIG;
+      const enabled = runtimeConfig?.WEB_LIVE_ENABLED ?? false;
+      setIsWebLiveEnabled(enabled);
+
+      if (enabled) {
+        fetchSources();
+      } else {
+        setLoading(false);
+      }
     }
-    fetchSources();
 
     return () => {
       document.head.removeChild(meta);
@@ -238,6 +249,33 @@ export default function WebLivePage() {
   const clearPlatformFilter = () => {
     setSelectedPlatform(null);
   };
+
+  // 如果功能未启用，显示提示
+  if (isWebLiveEnabled === false) {
+    return (
+      <PageLayout activePath='/web-live'>
+        <div className='flex items-center justify-center min-h-screen bg-transparent'>
+          <div className='text-center max-w-md mx-auto px-6'>
+            <div className='relative mb-8'>
+              <div className='relative mx-auto w-24 h-24 bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl shadow-2xl flex items-center justify-center transform hover:scale-105 transition-transform duration-300'>
+                <AlertTriangle className='w-12 h-12 text-white' />
+                <div className='absolute -inset-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl opacity-20 animate-pulse'></div>
+              </div>
+            </div>
+
+            <div className='space-y-4'>
+              <h3 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>功能未启用</h3>
+              <div className='bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4'>
+                <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
+                  网络直播功能当前未启用。请联系管理员在管理面板中开启此功能。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   if (loading) {
     return (

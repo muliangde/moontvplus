@@ -93,12 +93,16 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
         label: '电视直播',
         href: '/live',
       },
-      {
+    ];
+
+    // 如果启用网络直播，添加网络直播入口
+    if (runtimeConfig?.WEB_LIVE_ENABLED) {
+      items.push({
         icon: Globe,
         label: '网络直播',
         href: '/web-live',
-      },
-    ];
+      });
+    }
 
     // 如果配置了 OpenList 或 Emby，添加私人影库入口
     if (runtimeConfig?.PRIVATE_LIBRARY_ENABLED) {

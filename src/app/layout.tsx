@@ -83,6 +83,7 @@ export default async function RootLayout({
   let aiDefaultMessageNoVideo = '';
   let aiDefaultMessageWithVideo = '';
   let enableMovieRequest = true;
+  let webLiveEnabled = false;
   let customCategories = [] as {
     name: string;
     type: 'movie' | 'tv';
@@ -127,6 +128,8 @@ export default async function RootLayout({
     aiDefaultMessageWithVideo = config.AIConfig?.DefaultMessageWithVideo || '';
     // 求片功能配置
     enableMovieRequest = config.SiteConfig.EnableMovieRequest ?? true;
+    // 网络直播功能配置
+    webLiveEnabled = config.WebLiveEnabled ?? false;
     // 检查是否启用了 OpenList 功能
     openListEnabled = !!(
       config.OpenListConfig?.Enabled &&
@@ -182,6 +185,7 @@ export default async function RootLayout({
     AI_DEFAULT_MESSAGE_NO_VIDEO: aiDefaultMessageNoVideo,
     AI_DEFAULT_MESSAGE_WITH_VIDEO: aiDefaultMessageWithVideo,
     ENABLE_MOVIE_REQUEST: enableMovieRequest,
+    WEB_LIVE_ENABLED: webLiveEnabled,
   };
 
   return (
